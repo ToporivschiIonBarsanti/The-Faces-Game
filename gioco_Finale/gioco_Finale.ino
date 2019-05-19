@@ -1,3 +1,4 @@
+#include <EEPROM.h>
 #include <LiquidCrystal.h>
 const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
 LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
@@ -18,6 +19,11 @@ int score; //corresponds to the number of points the user has achieved during hi
 int buttonDaPremere; //is assigned a value after a "face" is generated on screen
 int ultimoButtonPremuto; //is assigned a value after pressing a button
 bool premuto; //used to exit a cycle after pressing a button
+
+//EEPROM vars
+int viteE; //1 address
+int scoreE; //0 address
+//int tempoMaxE; //2 address
 
 //custom characters
 
@@ -54,7 +60,6 @@ byte upsetFace[] = {
   B10001,
   B10001
 };
-
 //end custom characters
 
 void setup() {
@@ -67,9 +72,16 @@ void setup() {
   pinMode(10, INPUT_PULLUP);
   pinMode(9, INPUT_PULLUP);
   pinMode(8, INPUT_PULLUP);
-  tempo = 0; tempoMax = 1000; tempoMassimo = 3 * tempoMax;
+  scoreE = EEPROM.read(0); viteE = EEPROM.read(1); //tempoMaxE = EEPROM.read(2);
+  if (scoreE != 255 && viteE != 255 /*&& tempoMaxE != 255*/) {
+    //tempoMax = tempoMaxE; 
+    score = scoreE; vite = viteE;
+  }
+  else {
+     vite = 3; score = 0;
+  }
+  tempo = 0; tempoMax = 1000; tempoMassimo = 3 * tempoMax; premuto = false;
   b1 = 10; b2 = 9; b3 = 8;
-  vite = 3; score = 0; premuto = false;
   randomSeed(analogRead(0));
 }
 
@@ -84,8 +96,6 @@ void loop() {
   CaricaScore();
   Azione();
   lcd.clear();
-
-
 }
 
 //interface methods
@@ -101,17 +111,16 @@ void CaricaCuori(int numCuori) {
 }
 
 void CaricaScore() {
+  if(score != 0){
+  EEPROM.write(0, score);
+  }
   lcd.setCursor(0, 0);
   lcd.print("Score: ");
   lcd.print(score);
 }
-
 //end interface methods
 
 //the faces methods
-
-
-
 void MostraUnaFaccia(int tipo, int posto) {
   if (posto == 10) {
     lcd.setCursor(3, 1);
@@ -126,10 +135,10 @@ void MostraUnaFaccia(int tipo, int posto) {
   buttonDaPremere = posto;
 }
 void Azione() {
-  
-  int tipo = random(0,3);
-  int posto = random(8,11);
-  
+
+  int tipo = random(0, 3); //generate a random number between 0 and 2 that will correspond to a byte character
+  int posto = random(8, 11); //generate a random number that will correspond to a button
+
   MostraUnaFaccia(tipo, posto);
 
   while (!premuto) {
@@ -169,21 +178,24 @@ void Azione() {
     tempoMassimo--; //it's constantly decreasing, until it reaches a zero (see why above)
     delay(1);
   }
-  
+
   //final control
-  
+
   if (tempo <= tempoMax) {
     if (tipo == 0) { //if the "face" is a heart
       if (ultimoButtonPremuto == buttonDaPremere) { //if the correct button was pressed the user gains a life and a point
         score++;
         vite++;
+        EEPROM.write(1, vite);
         tempoMax -= 30;
         if (vite >= 5) { //the maximum amount of lives is five
           vite = 5;
+          EEPROM.write(1, vite);
         }
       }
       else {
         vite--;
+        EEPROM.write(1, vite);
       }
     }
     else if (tipo == 1) { //if the "face" is a happy face
@@ -193,17 +205,21 @@ void Azione() {
       }
       else {
         vite--;
+        EEPROM.write(1, vite);
       }
     }
     else if (tipo == 2) { //if the "face" is an upset face
       if (ultimoButtonPremuto == buttonDaPremere) { //if the user has pressed the correct button for the upset face, he is losing the lives
         vite--;
+        EEPROM.write(1, vite);
       }
     }
   }
   else {
     vite--;
+    EEPROM.write(1, vite);
   }
+  //EEPROM.write(2, tempoMax);
   tempo = 0; ultimoButtonPremuto = -1; premuto = false; tempoMassimo = 3 * tempoMax;
 }
 //end the faces methods
@@ -218,6 +234,7 @@ void GameEnded() {
   }
   lcd.clear();
   delay(1000);
+  EEPROM.write(0, 255); EEPROM.write(1, 255); //EEPROM.write(2, 255);
   vite = 3; score = 0; tempoMax = 1000;
 }
 void MostraMessaggioFinito() { //shows the amount of points reached by the end of the game and a message about "how to continue to play"
