@@ -1,3 +1,7 @@
+/*  The Faces Game
+ *  Made by Toporivschi Ion, a student for I.T.T. E. Barsanti.
+ *  all rights are reserved, not for commercial release
+ */
 #include <EEPROM.h>
 #include <LiquidCrystal.h>
 const int rs = 12, en = 11, d4 = 5, d5 = 4, d6 = 3, d7 = 2;
@@ -15,15 +19,14 @@ int tempoMassimo; //used to punish users who didn't press a button in the time a
 int vite; //corresponds to the "lives" the user has in his disposal, starts with three
 int score; //corresponds to the number of points the user has achieved during his playtime
 
+//EEPROM vars
+int scoreE; //0 address
+int viteE; //1 address
+
 //vars that control buttons || all three below execute control functions
 int buttonDaPremere; //is assigned a value after a "face" is generated on screen
 int ultimoButtonPremuto; //is assigned a value after pressing a button
-bool premuto; //used to exit a cycle after pressing a button
-
-//EEPROM vars
-int viteE; //1 address
-int scoreE; //0 address
-//int tempoMaxE; //2 address
+bool premuto; //used to exit the cycle after pressing a button
 
 //custom characters
 
@@ -60,6 +63,7 @@ byte upsetFace[] = {
   B10001,
   B10001
 };
+
 //end custom characters
 
 void setup() {
@@ -72,15 +76,15 @@ void setup() {
   pinMode(10, INPUT_PULLUP);
   pinMode(9, INPUT_PULLUP);
   pinMode(8, INPUT_PULLUP);
-  scoreE = EEPROM.read(0); viteE = EEPROM.read(1); //tempoMaxE = EEPROM.read(2);
-  if (scoreE != 255 && viteE != 255 /*&& tempoMaxE != 255*/) {
-    //tempoMax = tempoMaxE; 
+  scoreE = EEPROM.read(0); viteE = EEPROM.read(1);
+  if (scoreE != 255 && viteE != 255) {
     score = scoreE; vite = viteE;
+    tempoMax = 1000-(score*30);
   }
   else {
-     vite = 3; score = 0;
+     vite = 3; score = 0; tempoMax = 1000;
   }
-  tempo = 0; tempoMax = 1000; tempoMassimo = 3 * tempoMax; premuto = false;
+  tempo = 0; tempoMassimo = 3 * tempoMax; premuto = false;
   b1 = 10; b2 = 9; b3 = 8;
   randomSeed(analogRead(0));
 }
@@ -111,8 +115,8 @@ void CaricaCuori(int numCuori) {
 }
 
 void CaricaScore() {
-  if(score != 0){
-  EEPROM.write(0, score);
+  if(score != 0){ //can add an if millis() < neccesary time to reach this method, to be sure it's not triggered during the start of the game, but if i exit with smaller number of lives
+  EEPROM.write(0, score); //|^ it still will be triggered || or just cancell if score != 0
   }
   lcd.setCursor(0, 0);
   lcd.print("Score: ");
@@ -136,7 +140,7 @@ void MostraUnaFaccia(int tipo, int posto) {
 }
 void Azione() {
 
-  int tipo = random(0, 3); //generate a random number between 0 and 2 that will correspond to a byte character
+  int tipo = random(0, 3); //generate a random number between 0 and 2 that will correspond to a byte character created before 
   int posto = random(8, 11); //generate a random number that will correspond to a button
 
   MostraUnaFaccia(tipo, posto);
@@ -219,7 +223,6 @@ void Azione() {
     vite--;
     EEPROM.write(1, vite);
   }
-  //EEPROM.write(2, tempoMax);
   tempo = 0; ultimoButtonPremuto = -1; premuto = false; tempoMassimo = 3 * tempoMax;
 }
 //end the faces methods
