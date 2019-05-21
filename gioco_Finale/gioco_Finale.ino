@@ -1,6 +1,5 @@
 /*  The Faces Game
  *  Made by Toporivschi Ion, a student for I.T.T. E. Barsanti.
- *  all rights are reserved, not for commercial release
  */
 #include <EEPROM.h>
 #include <LiquidCrystal.h>
@@ -12,19 +11,19 @@ int b1; int b2; int b3;
 
 //time vars that control difficulty/functionality of the game
 int tempo; //to know for how long the user was pressing a button
-int tempoMax; //corresponds for the maximum time the user is given to press a button, after successfully scoring a point it's decreasing
-int tempoMassimo; //used to punish users who didn't press a button in the time amount (triple value of tempoMax), so it's also decreasing with the rise of difficulty level
+int tempoMax; //corresponds to the maximum amount of time the user is given to press a button, after successfully scoring a point it's decreasing
+int tempoMassimo; //used to punish the users who didn't press a button in the time given (triple value of tempoMax), so it's also decreasing with the rise of difficulty level
 
 //game objective vars
-int vite; //corresponds to the "lives" the user has in his disposal, starts with three
+int vite; //corresponds to the "lives" the user has at his disposal, the game starts with three
 int score; //corresponds to the number of points the user has achieved during his playtime
 
 //EEPROM vars
-int scoreE; //0 address
-int viteE; //1 address
+int scoreE; //0 | the address of the cell
+int viteE;  //1 | the address of the cell
 
-//vars that control buttons || all three below execute control functions
-int buttonDaPremere; //is assigned a value after a "face" is generated on screen
+//vars that control buttons | all three below execute control functions
+int buttonDaPremere; //is assigned a value after a "face" is generated on lcd screen
 int ultimoButtonPremuto; //is assigned a value after pressing a button
 bool premuto; //used to exit the cycle after pressing a button
 
@@ -67,7 +66,6 @@ byte upsetFace[] = {
 //end custom characters
 
 void setup() {
-  // put your setup code here, to run once:
   Serial.begin(9600);
   lcd.begin(16, 2);
   lcd.createChar(0, heart);
@@ -90,22 +88,20 @@ void setup() {
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
-
+  
+  CaricaCuori(vite); //shows the number of lives
+  CaricaScore(); //shows the score
+  Azione(); //the main method
+  lcd.clear();
+  
   if (vite < 1) {
     GameEnded();
   }
-
-  CaricaCuori(vite);
-  CaricaScore();
-  Azione();
-  lcd.clear();
 }
 
 //interface methods
-
 void CaricaCuori(int numCuori) {
-  int lastPlace = 15; //needed to write byte characters from the last place in the line
+  int lastPlace = 15; //is needed to write byte characters from the last place in the line (which is 15 because the first is 0)
   while (numCuori != 0) {
     lcd.setCursor(lastPlace, 0);
     lcd.write(byte(0));
@@ -113,10 +109,14 @@ void CaricaCuori(int numCuori) {
     lastPlace--;
   }
 }
-
 void CaricaScore() {
-  if(score != 0){ //can add an if millis() < neccesary time to reach this method, to be sure it's not triggered during the start of the game, but if i exit with smaller number of lives
-  EEPROM.write(0, score); //|^ it still will be triggered || or just cancell if score != 0
+  /* developer's note: can add an if millis() < neccesary time to reach this method, 
+   * to be sure it's not triggered during the start of the game, but if the user exits with smaller number of lives
+   * while the score is still 0, it, ultimately, will be triggered || just cancell if score != 0
+   UPDATE: not delevoped.
+  */
+  if(score != 0){ 
+  EEPROM.write(0, score); 
   }
   lcd.setCursor(0, 0);
   lcd.print("Score: ");
@@ -150,8 +150,9 @@ void Azione() {
       break;
     }
     while (digitalRead(b1) == LOW) {
-      if (tempoMassimo <= 0) { //if a button is pressed for too long
+      if (tempoMassimo <= 0) { //if a button is pressed for too long the cycle will be broken
         break;
+        ultimoButtonPremuto = 0;
       }
       tempo++;
       tempoMassimo--;
@@ -162,6 +163,7 @@ void Azione() {
     while (digitalRead(b2) == LOW) {
       if (tempoMassimo <= 0) {
         break;
+        ultimoButtonPremuto = 0;
       }
       tempo++;
       tempoMassimo--;
@@ -172,6 +174,7 @@ void Azione() {
     while (digitalRead(b3) == LOW) {
       if (tempoMassimo <= 0) {
         break;
+        ultimoButtonPremuto = 0;
       }
       tempo++;
       tempoMassimo--;
@@ -213,7 +216,7 @@ void Azione() {
       }
     }
     else if (tipo == 2) { //if the "face" is an upset face
-      if (ultimoButtonPremuto == buttonDaPremere) { //if the user has pressed the correct button for the upset face, he is losing the lives
+      if (ultimoButtonPremuto == buttonDaPremere) { //if the correct button was pressed the user loses a life
         vite--;
         EEPROM.write(1, vite);
       }
@@ -221,7 +224,7 @@ void Azione() {
   }
   else {
     vite--;
-    EEPROM.write(1, vite);
+    EEPROM.write(1, vite); //every change in number of lives is always written in eeprom memory
   }
   tempo = 0; ultimoButtonPremuto = -1; premuto = false; tempoMassimo = 3 * tempoMax;
 }
@@ -229,18 +232,16 @@ void Azione() {
 
 //game ending methods
 void GameEnded() {
-
-
   while (digitalRead(b3) == HIGH) {
     MostraMessaggioFinito();
-
   }
   lcd.clear();
   delay(1000);
-  EEPROM.write(0, 255); EEPROM.write(1, 255); //EEPROM.write(2, 255);
+  EEPROM.write(0, 255); EEPROM.write(1, 255);
   vite = 3; score = 0; tempoMax = 1000;
 }
-void MostraMessaggioFinito() { //shows the amount of points reached by the end of the game and a message about "how to continue to play"
+void MostraMessaggioFinito() { 
+  //shows the amount of points reached by the end of the game and a message about "how to continue to play"
   lcd.clear();
   lcd.setCursor(0, 0);
   lcd.print("Game Over");
